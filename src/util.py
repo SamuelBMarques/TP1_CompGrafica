@@ -50,3 +50,30 @@ def criar_mapeamento(segs, largura, altura, margem=2):
                 (y - y_min) * s + margem + desloc_y)
 
     return mapear
+
+
+def carregar_modelo_2d(caminho):
+    """
+    Le o VTK (PyVista) mantendo a conectividade.
+      pontos  : matriz (N, 2) com x, y de cada ponto
+      indices : matriz (M, 2) com os indices dos dois pontos de cada vaso
+      raios   : vetor (M,)
+    """
+    malha = pv.read(caminho)
+    nome = "raio" if "raio" in malha.cell_data else list(malha.cell_data.keys())[0]
+    raios = np.asarray(malha.cell_data[nome], dtype=float)
+    indices = malha.lines.reshape(-1, 3)[:, 1:]
+    return malha.points[:, :2], indices, raios
+
+
+def extremos_arvore(indices):
+    """
+    Devolve (raiz, folhas), ambos como indices de pontos.
+
+    - Raiz: primeiro ponto do primeiro vaso (convencao dos arquivos CCO).
+    - Folhas: pontos que aparecem em um unico segmento, exceto a raiz.
+    """
+    grau = np.bincount(indices.ravel())
+    raiz = int(indices[0][0])
+    folhas = [int(i) for i in np.nonzero(grau == 1)[0] if i != raiz]
+    return raiz, folhas

@@ -8,20 +8,21 @@ Convencao: o centro do pixel (i, j) fica na coordenada inteira (i, j).
 Um pixel e pintado se o seu centro esta dentro do poligono.
 
 Uso:
-    python3 src/scanlineFill.py ../GRUPO_/data/tree2D_Nterm008.vtk
+    python scanline.py ../data/exemplo2d.vtk
 Gera ../report/figures/scanline_fill.png
 """
 
 import os
 import random
 import sys
-from math import ceil
+from math import atan2, ceil
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from bresenham import desenhar_grade, rasterizar_arvore
-from util import carregar_segmentos_2d
+from util import (carregar_modelo_2d, carregar_segmentos_2d,
+                  criar_mapeamento, extremos_arvore)
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +154,98 @@ def figura(segs, raios, caminho_saida, y_demo=12):
     return inter, y_demo
 
 
+
+# ---------------------------------------------------------------------------
+# Poligono formado pelos extremos da arvore (raiz + pontas das folhas)
+# ---------------------------------------------------------------------------
+
+def ordenar_por_angulo(pontos):
+    """
+    Ordena os pontos em torno do centroide, pelo angulo.
+    Isso liga cada ponto ao seu vizinho angular e gera um poligono simples
+    (sem arestas se cruzando), que pode ser concavo.
+    Devolve a lista de posicoes na nova ordem.
+    """
+    cx = sum(p[0] for p in pontos) / len(pontos)
+    cy = sum(p[1] for p in pontos) / len(pontos)
+    return sorted(range(len(pontos)),
+                  key=lambda i: atan2(pontos[i][1] - cy, pontos[i][0] - cx))
+
+
+def arestas_se_cruzam(a, b, c, d):
+    """True se os segmentos ab e cd se cruzam (teste por orientacao)."""
+    def orient(p, q, r):
+        v = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+        return int(v > 0) - int(v < 0)
+    return orient(a, b, c) != orient(a, b, d) and orient(c, d, a) != orient(c, d, b)
+
+
+def poligono_simples(vertices):
+    """Confere que nenhuma aresta cruza outra aresta nao adjacente."""
+    n = len(vertices)
+    for i in range(n):
+        for j in range(i + 2, n):
+            if i == 0 and j == n - 1:
+                continue                  # primeira e ultima sao adjacentes
+            if arestas_se_cruzam(vertices[i], vertices[(i + 1) % n],
+                                 vertices[j], vertices[(j + 1) % n]):
+                return False
+    return True
+
+
+def area_shoelace(v):
+    """Area do poligono pela formula do cadarco (para conferir os pixels)."""
+    n = len(v)
+    return abs(sum(v[i][0] * v[(i + 1) % n][1] - v[(i + 1) % n][0] * v[i][1]
+                   for i in range(n))) / 2
+
+
+def figura_extremos(pontos, indices, raios, caminho_saida, n=64):
+    raiz, folhas = extremos_arvore(indices)
+    ids = [raiz] + folhas
+
+    # Mesmo mapeamento da arvore rasterizada, mantendo coordenadas fracionarias
+    mapear = criar_mapeamento(pontos[indices], n, n)
+    pix = [mapear(*pontos[i]) for i in ids]
+
+    ordem = ordenar_por_angulo(pix)
+    ids = [ids[k] for k in ordem]
+    vertices = [pix[k] for k in ordem]
+
+    assert poligono_simples(vertices), "poligono com arestas se cruzando"
+    grade, _ = scanline_fill(vertices, n, n)
+    for y in range(n):                    # confere com o metodo de referencia
+        for x in range(n):
+            assert grade[y, x] == ponto_dentro(x, y, vertices)
+
+    print(f"Raiz: ponto {raiz} | folhas: {folhas}")
+    print("Ordem dos vertices (angulo em torno do centroide):")
+    for i, (x, y) in zip(ids, vertices):
+        print(f"  ponto {i:2d} -> pixel ({x:6.2f}, {y:6.2f})")
+    print(f"Pixels preenchidos: {int(grade.sum())} | area exata: "
+          f"{area_shoelace(vertices):.1f}")
+
+    # Desenho: arvore + poligono preenchido
+    fig, ax = plt.subplots(figsize=(8, 8))
+    arvore, _ = rasterizar_arvore(pontos[indices], raios, n)
+    cmap = plt.get_cmap("viridis").copy()
+    cmap.set_bad((1, 1, 1, 0))            # pixels vazios transparentes
+    # A arvore fica POR CIMA do preenchimento (zorder), preservando as cores
+    img = ax.imshow(arvore, origin="lower", cmap=cmap, vmin=raios.min(),
+                    vmax=raios.max(), interpolation="nearest", zorder=1.5)
+    desenhar_grade(ax, n, n)
+    sobrepor_poligono(ax, vertices, grade, "orange")
+    for i, (x, y) in zip(ids, vertices):
+        ax.plot(x, y, "ko", markersize=5)
+        ax.annotate("raiz" if i == raiz else f"folha {i}", (x, y),
+                    textcoords="offset points", xytext=(6, 6), fontsize=8)
+    fig.colorbar(img, ax=ax, shrink=0.7, label="raio")
+    ax.set_title("Poligono formado pela raiz e pelas folhas "
+                 f"({int(grade.sum())} pixels)")
+    fig.tight_layout()
+    fig.savefig(caminho_saida, dpi=150)
+    plt.close(fig)
+
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -184,4 +277,9 @@ if __name__ == "__main__":
     print(f"Scanline y = {y}: cruzamentos x = {inter[y]}")
     pares = list(zip(inter[y][0::2], inter[y][1::2]))
     print(f"Pares preenchidos: {pares}")
-    print(f"\nFigura salva em {os.path.normpath(saida)}")
+    # 4) Poligono dos extremos da arvore
+    print()
+    pontos, indices, raios2 = carregar_modelo_2d(sys.argv[1])
+    figura_extremos(pontos, indices, raios2,
+                    os.path.join(saida, "scanline_extremos.png"))
+    print(f"\nFiguras salvas em {os.path.normpath(saida)}")
