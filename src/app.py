@@ -7,6 +7,8 @@ Estende o Visualizador (visualizador.py: Modulos 1 e 2) com:
   - rotacao do modelo tambem em X e Y (nao so em Z);
   - janela de recorte desenhada sobre o modelo (Modulo 6), com a escolha do
     algoritmo (Cohen-Sutherland ou Liang-Barsky) e a janela movel/redimensionavel.
+    O recorte aparece em TODOS os modos de desenho, inclusive nos tubos com
+    espessura proporcional ao raio (tecla m troca o modo).
     O recorte e feito sobre a PROJECAO em xy; o z de cada extremo recortado
     e interpolado ao longo do segmento.
 
@@ -18,6 +20,7 @@ Uso:
     python app.py ../data/arvore.vtk --recorte --algoritmo 1
     python app.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX
     python app.py ../data/arvore.vtk --captura fig.png --recorte     (sem janela)
+    python app.py ../data/arvore.vtk --captura fig.png --recorte --modo 1   (tubos)
 """
 
 import argparse
@@ -33,11 +36,11 @@ ALGORITMOS = [("Cohen-Sutherland", cohen_sutherland), ("Liang-Barsky", liang_bar
 
 AJUDA = ("TECLAS\n"
          "mouse: esq = girar | roda = zoom | meio/shift+esq = mover camera\n"
-         "m modo | v vista | o ortografica/perspectiva | 0 reset\n"
+         "M modo | V vista | O ortografica/perspectiva | 0 reset\n"
          "setas: transladar modelo | + / - : escala\n"
-         "z x: gira em Z | a d: gira em Y | u i: gira em X\n"
-         "1 liga/desliga recorte | 2 troca algoritmo\n"
-         "h j k l: move janela | , . : reduz/amplia janela")
+         "Z X: gira em Z | A D: gira em Y | U I: gira em X\n"
+         "1 liga/desliga recorte (linhas e tubos) | 2 troca algoritmo\n"
+         "H J K L: move janela | , . : reduz/amplia janela")
 
 
 def matriz_rotacao_x(graus):
@@ -69,6 +72,7 @@ class Aplicacao(Visualizador):
         self.zjan = float(self.centro[2])      # plano da janela (z do centro do modelo)
         self.overlays = []                     # atores do recorte (seguem as transformacoes)
         self.n_visiveis = 0
+        self._ids_visiveis = []
 
     # -- Janela de recorte -------------------------------------------------
     def _janela_padrao(self):
@@ -106,6 +110,7 @@ class Aplicacao(Visualizador):
             novos.append((r[2], r[3], self._z_em(p0, p1, r[2], r[3])))
             ids.append(i)
         self.n_visiveis = len(ids)
+        self._ids_visiveis = ids
         if not ids:
             return None
         n = len(ids)
@@ -121,31 +126,72 @@ class Aplicacao(Visualizador):
         except Exception:
             pass                                       # nao existia
 
+    def _tubos_do_recorte(self, malha):
+        """
+        Mesmos tubos do visualizador (espessura proporcional ao raio), mas so
+        para os trechos que sobraram do recorte.
+        """
+        fator = 0.015 * self.tamanho / self.raios.max()  
+        r = np.repeat(self.raios[self._ids_visiveis], 2)
+        malha.point_data["raio"] = r
+        malha.point_data["raio_visual"] = r * fator
+        return malha.tube(radius=0.001 * self.tamanho, scalars="raio_visual",
+                          absolute=True, n_sides=12)
+
     def _recorte_overlay(self):
-        """Desenha (ou remove) janela + trechos recortados conforme recorte_on."""
+        """
+        Desenha (ou remove) a janela e o resultado do recorte conforme recorte_on.
+        Acompanha o modo de desenho:
+          modo 0 (linhas)           : trechos visiveis como linhas coloridas;
+          modo 1 (tubos + cor)      : trechos visiveis como tubos coloridos pelo raio;
+          modo 2 (tubos, espessura) : trechos visiveis como tubos de uma cor so.
+        Nos modos de tubos, a arvore inteira fica como tubos cinza translucidos
+        (o que foi descartado) e a janela ganha uma area translucida.
+        """
         if not self.recorte_on:
-            for nome in ("janela", "cinza", "recorte"):
+            for nome in ("janela", "janela_area", "cinza", "recorte"):
                 self._remover(nome)
             self.overlays = []
             return
 
+        tubular = self.modo in (1, 2)
         self.ator.SetVisibility(False)                 # esconde a arvore original
         x0, x1, y0, y1 = self.janela
         z = self.zjan
-        quadro = pv.PolyData(np.array([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]),
-                             lines=np.array([5, 0, 1, 2, 3, 0]))
+        cantos = np.array([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]])
+        quadro = pv.PolyData(cantos, lines=np.array([5, 0, 1, 2, 3, 0]))
         atores = [self.p.add_mesh(quadro, color="red", line_width=3, name="janela",
-                                  reset_camera=False),
-                  self.p.add_mesh(self.seg, color="lightgray", line_width=1,
-                                  name="cinza", reset_camera=False)]
+                                  reset_camera=False)]
+
+        if tubular:
+            area = pv.PolyData(cantos, faces=np.array([4, 0, 1, 2, 3]))
+            atores.append(self.p.add_mesh(area, color="red", opacity=0.12,
+                                          name="janela_area", reset_camera=False))
+            atores.append(self.p.add_mesh(self.tubos, color="lightgray", opacity=0.25,
+                                          name="cinza", reset_camera=False))
+        else:
+            self._remover("janela_area")
+            atores.append(self.p.add_mesh(self.seg, color="lightgray", line_width=1,
+                                          name="cinza", reset_camera=False))
+
         visivel = self._calcular_recorte()
-        if visivel is not None:
+        if visivel is None:
+            self._remover("recorte")
+        elif not tubular:
             atores.append(self.p.add_mesh(
                 visivel, scalars="raio", cmap="viridis",
                 clim=[self.raios.min(), self.raios.max()], line_width=5,
                 show_scalar_bar=False, name="recorte", reset_camera=False))
         else:
-            self._remover("recorte")
+            tubos = self._tubos_do_recorte(visivel)
+            if self.modo == 1:
+                atores.append(self.p.add_mesh(
+                    tubos, scalars="raio", cmap="viridis",
+                    clim=[self.raios.min(), self.raios.max()],
+                    show_scalar_bar=False, name="recorte", reset_camera=False))
+            else:
+                atores.append(self.p.add_mesh(tubos, color="steelblue", name="recorte",
+                                              reset_camera=False))
         self.overlays = atores
 
     # -- Integracao com o visualizador base ---------------------------------
