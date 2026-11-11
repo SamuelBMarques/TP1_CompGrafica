@@ -44,12 +44,13 @@ Os arquivos `.vtk` ficam em `data/` (ou, se não forem incluídos no `.zip`, dev
 Grupo_XX/
 ├── src/            código-fonte (os comandos abaixo são executados aqui)
 ├── data/           arquivos .vtk (ex.: tree2D_Nterm008.vtk)
+├── figures/        imagens geradas pelos programas (criada automaticamente)
 ├── report/         relatorio.tex, relatorio.pdf, figures/
 ├── presentation/   apresentacao.tex, apresentacao.pdf, figures/
 └── README.md
 ```
 
-Todos os comandos devem ser executados **de dentro de `src/`**. As figuras dos módulos didáticos são salvas automaticamente em `../report/figures/` (a pasta é criada se não existir).
+Todos os comandos devem ser executados **de dentro de `src/`**. As figuras dos módulos didáticos são salvas automaticamente em `../figures/` (a pasta é criada se não existir). O mesmo vale para as capturas do `app.py`: `--captura vista.png` grava em `../figures/vista.png`. Se for passado um caminho com pasta (por exemplo, `--captura /tmp/vista.png`), ele é usado como está, e uma extensão ausente vira `.png`. Para usar as imagens no relatório e na apresentação, copie-as de `figures/` para `report/figures/` e `presentation/figures/`.
 
 ## 6. Como executar
 
@@ -61,9 +62,7 @@ cd src
 # Aplicação principal (janela interativa: Módulos 1, 2 e demonstração do recorte)
 python app.py ../data/arvore.vtk
 
-python visualizador.py ../data/arvore.vtk
-
-# Módulos didáticos (independentes; geram figuras em ../report/figures)
+# Módulos didáticos (independentes; geram figuras em ../figures)
 python bresenham.py        ../data/arvore.vtk      # Módulo 3
 python scanlineFill.py     ../data/arvore.vtk      # Módulo 4
 python antiAliasing.py     ../data/arvore.vtk      # Módulo 5
@@ -79,7 +78,7 @@ python app.py ../data/arvore.vtk --projecao ortografica          # projeção in
 python app.py ../data/arvore.vtk --recorte --algoritmo 1          # inicia com o recorte (0 = Cohen-Sutherland, 1 = Liang-Barsky)
 python app.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX     # janela de recorte em coordenadas do mundo
 python app.py ../data/arvore.vtk --modo 1 --vista isometrica --rotx 10 --roty 10 --projecao ortografica --captura fig.png
-                                                                  # salva imagem sem abrir janela (vista: xy, xz, yz, isometrica ou 0-3;
+                                                                  # salva ../figures/fig.png sem abrir janela (vista: xy, xz, yz, isometrica ou 0-3;
                                                                   # --rotx/--roty/--rotz em graus; --projecao perspectiva|ortografica)
 
 python recorteArvore.py    ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX

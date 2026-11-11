@@ -19,12 +19,13 @@ Uso:
     python app.py ../data/arvore.vtk
     python app.py ../data/arvore.vtk --recorte --algoritmo 1
     python app.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX
-    python app.py ../data/arvore.vtk --captura fig.png --recorte     (sem janela)
+    python app.py ../data/arvore.vtk --captura fig.png --recorte     (salva em ../figures/fig.png, sem janela)
     python app.py ../data/arvore.vtk --captura fig.png --recorte --modo 1   (tubos)
     python app.py ../data/arvore.vtk --captura v.png --modo 1 --vista xz --rotx 10 --roty 10 --projecao ortografica
 """
 
 import argparse
+import os
 
 import numpy as np
 import pyvista as pv
@@ -33,15 +34,19 @@ from recorteSegmentos import cohen_sutherland, liang_barsky
 from visualizador import (Visualizador, matriz_escala, matriz_rotacao_z,
                           matriz_translacao)
 
+# Pasta padrao das imagens: ../figures (relativa a este arquivo, em src/)
+PASTA_FIGURAS = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "..", "figures")
+
 ALGORITMOS = [("Cohen-Sutherland", cohen_sutherland), ("Liang-Barsky", liang_barsky)]
 
 AJUDA = ("TECLAS\n"
          "mouse: esq = girar | roda = zoom | meio/shift+esq = mover camera\n"
-         "M modo | V vista | O ortografica/perspectiva | 0 reset\n"
+         "m modo | v vista | o ortografica/perspectiva | 0 reset\n"
          "setas: transladar modelo | + / - : escala\n"
-         "Z X: gira em Z | A D: gira em Y | U I: gira em X\n"
+         "z x: gira em Z | a d: gira em Y | u i: gira em X\n"
          "1 liga/desliga recorte (linhas e tubos) | 2 troca algoritmo\n"
-         "H J K L: move janela | , . : reduz/amplia janela")
+         "h j k l: move janela | , . : reduz/amplia janela")
 
 
 def matriz_rotacao_x(graus):
@@ -288,6 +293,23 @@ class Aplicacao(Visualizador):
         super().executar(captura)     # desenha, registra as teclas do base e abre a janela
 
 
+def caminho_captura(nome):
+    """
+    So o nome ('vista.png')    -> salva em ../figures/vista.png
+    Caminho com pasta          -> usa o caminho informado
+    Sem extensao               -> acrescenta .png
+    A pasta de destino e criada se nao existir.
+    """
+    if not os.path.splitext(nome)[1]:
+        nome += ".png"
+    pasta = os.path.dirname(nome)
+    if pasta == "":
+        pasta = PASTA_FIGURAS
+        nome = os.path.join(pasta, nome)
+    os.makedirs(pasta, exist_ok=True)
+    return os.path.normpath(nome)
+
+
 def _vista(valor):
     """Aceita o indice (0 a 3) ou o nome da vista (xy, xz, yz, isometrica)."""
     nomes = Visualizador.VISTAS
@@ -301,7 +323,9 @@ def _vista(valor):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("arquivo", help="arquivo .vtk")
-    ap.add_argument("--captura", help="salva uma imagem e fecha (sem janela)")
+    ap.add_argument("--captura", metavar="NOME.png",
+                    help="salva uma imagem e fecha (sem janela); so o nome vai para "
+                         "../figures/")
     ap.add_argument("--modo", type=int, default=0, help="0, 1 ou 2")
     ap.add_argument("--vista", type=_vista, default=0,
                     help="0/xy, 1/xz, 2/yz ou 3/isometrica (vale para --captura)")
@@ -320,6 +344,8 @@ if __name__ == "__main__":
                     metavar=("XMIN", "XMAX", "YMIN", "YMAX"),
                     help="janela de recorte em coordenadas do mundo")
     a = ap.parse_args()
+    if a.captura:
+        a.captura = caminho_captura(a.captura)
 
     app = Aplicacao(a.arquivo, off_screen=a.captura is not None, janela=a.janela,
                     recorte=a.recorte, algoritmo=a.algoritmo)
@@ -333,5 +359,6 @@ if __name__ == "__main__":
         app.desenhar()
         app.aplicar_vista()
         app.p.show(screenshot=a.captura)
+        print(f"Imagem salva em {a.captura}")
     else:
         app.executar()

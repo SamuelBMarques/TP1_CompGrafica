@@ -7,7 +7,7 @@ de nenhuma biblioteca). O Matplotlib e usado apenas para MOSTRAR a grade.
 
 Uso:
     python3 src/bresenham.py ../GRUPO_/data/tree2D_Nterm008.vtk
-Gera as figuras bresenham_exemplo.png e bresenham_arvore.png em ../report/figures
+Gera as figuras bresenham_exemplo.png e bresenham_arvore.png em ../figures
 """
 
 import os
@@ -192,7 +192,7 @@ if __name__ == "__main__":
 
     segs, raios = carregar_segmentos_2d(sys.argv[1])
     saida = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "..", "report", "figures")
+                         "..", "figures")
     os.makedirs(saida, exist_ok=True)
 
     # 1) Testes automaticos em segmentos de todas as direcoes

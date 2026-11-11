@@ -18,7 +18,7 @@ ponto flutuante, no mesmo espaco em que os segmentos estao definidos
 Uso:
     python recorteSegmentos.py ../data/exemplo2d.vtk
     python recorteSegmentos.py ../data/exemplo2d.vtk --janela 0.02 0.08 0.01 0.07
-Gera ../report/figures/recorte_exemplo.png e recorte_arvore.png
+Gera ../figures/recorte_exemplo.png e recorte_arvore.png
 """
 
 import argparse
@@ -440,7 +440,7 @@ if __name__ == "__main__":
 
     segs, raios = carregar_segmentos(a.arquivo)
     saida = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "..", "report", "figures")
+                         "..", "figures")
     os.makedirs(saida, exist_ok=True)
 
     if a.janela:

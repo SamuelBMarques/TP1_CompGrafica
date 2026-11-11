@@ -16,7 +16,7 @@ Uso:
     python recorteArvore.py ../data/arvore.vtk --tamanho 0.4 --saida minhas_figuras
 Gera recorte_arvore.png (grade de pixels, como o Modulo 3) e
 recorte_exemplo.png na pasta de saida
-(padrao: ../report/figures).
+(padrao: ../figures).
 """
 
 import argparse
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     print("Janela %s: x in [%.4f, %.4f], y in [%.4f, %.4f]\n" % ((origem,) + janela))
 
     saida = a.saida or os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                    "..", "report", "figures")
+                                    "..", "figures")
     os.makedirs(saida, exist_ok=True)
 
     if len(segs) <= 40:

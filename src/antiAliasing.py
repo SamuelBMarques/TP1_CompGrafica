@@ -14,7 +14,7 @@ o que suaviza a escadinha.
 
 Uso:
     python antialiasing.py ../data/exemplo2d.vtk
-Gera ../report/figures/antialiasing.png
+Gera ../figures/antialiasing.png
 """
 
 import os
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     com = renderizar(pontos, indices, raios, poli, n, k)
 
     saida = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "..", "report", "figures")
+                         "..", "figures")
     os.makedirs(saida, exist_ok=True)
     figura(sem, com, k, os.path.join(saida, "antialiasing.png"))
 

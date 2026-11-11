@@ -21,7 +21,7 @@ Uso:
     python recortePoligonos.py                               # demonstracoes 1 e 2
     python recortePoligonos.py ../data/arvore.vtk            # + demonstracao 3
     python recortePoligonos.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX
-Gera recorte_poligono_*.png em ../report/figures
+Gera recorte_poligono_*.png em ../figures
 """
 
 import argparse
@@ -373,7 +373,7 @@ if __name__ == "__main__":
     a = ap.parse_args()
 
     saida = a.saida or os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                    "..", "report", "figures")
+                                    "..", "figures")
     os.makedirs(saida, exist_ok=True)
 
     # 1) Testes automaticos

@@ -9,7 +9,7 @@ Um pixel e pintado se o seu centro esta dentro do poligono.
 
 Uso:
     python scanline.py ../data/exemplo2d.vtk
-Gera ../report/figures/scanline_fill.png
+Gera ../figures/scanline_fill.png
 """
 
 import os
@@ -255,7 +255,7 @@ if __name__ == "__main__":
 
     segs, raios = carregar_segmentos_2d(sys.argv[1])
     saida = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         "..", "report", "figures")
+                         "..", "figures")
     os.makedirs(saida, exist_ok=True)
 
     # 1) Testes contra o metodo de referencia
