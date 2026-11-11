@@ -20,17 +20,11 @@ Disciplina BCC327 – Computação Gráfica (UFOP, 2026.2) · Prof. Dr. Rafael A
 
 | Biblioteca | Versão testada | Uso |
 |---|---|---|
-| Python | 3.12.3 (mínimo 3.10) | linguagem (o leitor próprio usa a sintaxe `X \| None`) |
+| Python | 3.12.3 (mínimo 3.10) | linguagem  |
 | NumPy | 2.5.4 | cálculo numérico |
 | Matplotlib | 3.11.2 | figuras dos módulos didáticos |
 | PyVista | 0.49.2 | leitura de VTK, tubos, câmera e janela 3D |
 
-Para preencher as versões, rode dentro do ambiente virtual:
-
-```bash
-python --version
-pip freeze | grep -iE "numpy|matplotlib|pyvista|vtk"
-```
 
 ## 4. Instruções de instalação
 
@@ -66,6 +60,8 @@ cd src
 
 # Aplicação principal (janela interativa: Módulos 1, 2 e demonstração do recorte)
 python app.py ../data/arvore.vtk
+
+python visualizador.py ../data/arvore.vtk
 
 # Módulos didáticos (independentes; geram figuras em ../report/figures)
 python bresenham.py        ../data/arvore.vtk      # Módulo 3
