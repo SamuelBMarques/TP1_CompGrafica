@@ -33,6 +33,24 @@ def matriz_escala(s):
     return np.diag([s, s, s, 1.0])
 
 
+def matriz_rotacao_x(angulo_graus):
+    a = np.radians(angulo_graus)
+    c, s = np.cos(a), np.sin(a)
+    m = np.eye(4)
+    m[1, 1], m[1, 2] = c, -s
+    m[2, 1], m[2, 2] = s, c
+    return m
+
+
+def matriz_rotacao_y(angulo_graus):
+    a = np.radians(angulo_graus)
+    c, s = np.cos(a), np.sin(a)
+    m = np.eye(4)
+    m[0, 0], m[0, 2] = c, s
+    m[2, 0], m[2, 2] = -s, c
+    return m
+
+
 def matriz_rotacao_z(angulo_graus):
     a = np.radians(angulo_graus)
     c, s = np.cos(a), np.sin(a)
@@ -42,15 +60,26 @@ def matriz_rotacao_z(angulo_graus):
     return m
 
 
+MATRIZES_ROTACAO = {"x": matriz_rotacao_x, "y": matriz_rotacao_y,
+                    "z": matriz_rotacao_z}
+
+
 # ---------------------------------------------------------------------------
 # Visualizador
 # ---------------------------------------------------------------------------
+
+AJUDA = ("TECLAS\n"
+         "mouse: esq = girar | roda = zoom | meio/shift+esq = mover camera\n"
+         "M modo | V vista | O ortografica/perspectiva | 0 reset\n"
+         "setas: transladar modelo | + / - : escala\n"
+         "Z X: gira em Z | A D: gira em Y | U I: gira em X")
 
 class Visualizador:
     MODOS = ["Linhas coloridas pelo raio",
              "Tubos (espessura + cor pelo raio)",
              "Tubos (somente espessura)"]
     VISTAS = ["xy", "xz", "yz", "isometrica"]
+    AJUDA = AJUDA      # subclasses podem sobrescrever o texto de ajuda
 
     def __init__(self, caminho, off_screen=False):
         # --- Leitura (PyVista) ---
@@ -147,12 +176,17 @@ class Visualizador:
         self.matriz = matriz_translacao(dx * passo, dy * passo) @ self.matriz
         self.atualizar()
 
-    def rotacionar(self, graus):
+    def rotacionar_eixo(self, eixo, graus):
         # Gira em torno do centro do modelo: T(c) * R * T(-c)
+        r = MATRIZES_ROTACAO[eixo](graus)
         c = self.centro_atual()
-        m = matriz_translacao(*c) @ matriz_rotacao_z(graus) @ matriz_translacao(*-c)
+        m = matriz_translacao(*c) @ r @ matriz_translacao(*-c)
         self.matriz = m @ self.matriz
         self.atualizar()
+
+    def rotacionar(self, graus):
+        # Mantido por compatibilidade: rotacao em Z
+        self.rotacionar_eixo("z", graus)
 
     def escalar(self, s):
         c = self.centro_atual()
@@ -208,13 +242,19 @@ class Visualizador:
         ev("Right", lambda: self.transladar(1, 0))
         ev("Up", lambda: self.transladar(0, 1))
         ev("Down", lambda: self.transladar(0, -1))
-        ev("z", lambda: self.rotacionar(10))
-        ev("x", lambda: self.rotacionar(-10))
+        ev("z", lambda: self.rotacionar_eixo("z", 10))
+        ev("x", lambda: self.rotacionar_eixo("z", -10))
+        ev("a", lambda: self.rotacionar_eixo("y", 10))
+        ev("d", lambda: self.rotacionar_eixo("y", -10))
+        ev("u", lambda: self.rotacionar_eixo("x", 10))
+        ev("i", lambda: self.rotacionar_eixo("x", -10))
         ev("plus", lambda: self.escalar(1.1))
         ev("equal", lambda: self.escalar(1.1))
         ev("minus", lambda: self.escalar(1 / 1.1))
         ev("0", self.resetar)
 
+        self.p.add_text(self.AJUDA, position="lower_left", font_size=8,
+                        color="black", name="ajuda")
         self.p.show(screenshot=captura)
 
 
