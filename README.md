@@ -6,8 +6,8 @@ Disciplina BCC327 – Computação Gráfica (UFOP, 2026.2) · Prof. Dr. Rafael A
 
 **Grupo XX**
 
-- Samuel Braga Marques – [MATRÍCULA]
-- Thiago Martins Zanete – [MATRÍCULA]
+- Samuel Braga Marques – 24.1.4031
+- Thiago Martins Zanete – 24.1.4005
 - Gabriel Barony Menezes – 24.1.4004
 
 ## 2. Tecnologia gráfica utilizada
@@ -79,9 +79,12 @@ python recortePoligonos.py ../data/arvore.vtk      # Módulo 7
 Opções úteis:
 
 ```bash
+python app.py ../data/arvore.vtk --projecao ortografica          # projeção inicial: perspectiva (padrão) ou ortografica
 python app.py ../data/arvore.vtk --recorte --algoritmo 1          # inicia com o recorte (0 = Cohen-Sutherland, 1 = Liang-Barsky)
 python app.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX     # janela de recorte em coordenadas do mundo
-python app.py ../data/arvore.vtk --modo 1 --vista 3 --captura fig.png   # salva imagem sem abrir janela
+python app.py ../data/arvore.vtk --modo 1 --vista isometrica --rotx 10 --roty 10 --projecao ortografica --captura fig.png
+                                                                  # salva imagem sem abrir janela (vista: xy, xz, yz, isometrica ou 0-3;
+                                                                  # --rotx/--roty/--rotz em graus; --projecao perspectiva|ortografica)
 
 python recorteArvore.py    ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX
 python recorteArvore.py    ../data/arvore.vtk --tamanho 0.4 --n 128 --vetorial
@@ -154,7 +157,7 @@ Rotação e escala são feitas em torno do centro do modelo. O recorte acompanha
 
 ### Realizado com auxílio de bibliotecas
 
-- **PyVista/VTK:** leitura do arquivo (`pv.read`), geração dos tubos (`tube`), mapa de cores *viridis* e barra de cores, janela, câmera, vistas (`view_xy`, `view_xz`, `view_yz`, `view_isometric`) e projeção ortográfica/perspectiva.
+- **PyVista/VTK:** leitura do arquivo (`pv.read`), geração dos tubos (`tube`), mapa de cores *viridis* e barra de cores, janela, câmera, vistas (`view_xy`, `view_xz`, `view_yz`, `view_isometric`), projeção ortográfica/perspectiva.
 - **Aplicação das matrizes ao desenho:** as matrizes são escritas pelo grupo, mas quem as multiplica pelos vértices na hora de renderizar é o VTK (via `user_matrix` do ator). A geometria original não é alterada.
 - **Matplotlib:** exibição das grades de pixels, janelas de recorte e figuras (`imshow`, linhas e retângulos para exibição).
 - **NumPy:** operações vetoriais e matriciais.
