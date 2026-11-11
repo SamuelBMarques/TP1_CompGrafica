@@ -91,9 +91,11 @@ python readVtk.py          ../data/arvore.vtk                     # leitor próp
 
 Se a janela não for informada, `recorteArvore.py`, `recortePoligonos.py` e `app.py` escolhem automaticamente uma janela que corta vários segmentos da árvore lida.
 
-## 7. Comandos de teclado e mouse (`app.py`)
+## 7. Comandos de teclado e mouse (`app.py` e `visualizador.py`)
 
 **Mouse** (padrão do PyVista): botão esquerdo gira a câmera, roda faz zoom, botão do meio (ou Shift + esquerdo) move a câmera.
+
+**Obs**: No `visualizador.py` não tem as opções que envolvem a janela de recorte
 
 | Tecla | Ação |
 |---|---|
