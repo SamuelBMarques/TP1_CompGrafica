@@ -21,6 +21,7 @@ Uso:
     python app.py ../data/arvore.vtk --janela XMIN XMAX YMIN YMAX
     python app.py ../data/arvore.vtk --captura fig.png --recorte     (sem janela)
     python app.py ../data/arvore.vtk --captura fig.png --recorte --modo 1   (tubos)
+    python app.py ../data/arvore.vtk --captura v.png --modo 1 --vista xz --rotx 10 --roty 10 --projecao ortografica
 """
 
 import argparse
@@ -131,7 +132,7 @@ class Aplicacao(Visualizador):
         Mesmos tubos do visualizador (espessura proporcional ao raio), mas so
         para os trechos que sobraram do recorte.
         """
-        fator = 0.015 * self.tamanho / self.raios.max()  
+        fator = 0.015 * self.tamanho / self.raios.max()   # igual ao Visualizador
         r = np.repeat(self.raios[self._ids_visiveis], 2)
         malha.point_data["raio"] = r
         malha.point_data["raio_visual"] = r * fator
@@ -225,12 +226,15 @@ class Aplicacao(Visualizador):
         return len(self.raios)
 
     # -- Transformacoes extras --------------------------------------------
-    def rotacionar_eixo(self, eixo, graus):
-        """Gira em torno do centro do modelo: T(c) * R * T(-c)."""
+    def _girar(self, eixo, graus):
+        """Acumula em self.matriz uma rotacao em torno do centro do modelo: T(c) * R * T(-c)."""
         r = {"x": matriz_rotacao_x, "y": matriz_rotacao_y, "z": matriz_rotacao_z}[eixo](graus)
         c = self.centro_atual()
         m = matriz_translacao(*c) @ r @ matriz_translacao(*-c)
         self.matriz = m @ self.matriz
+
+    def rotacionar_eixo(self, eixo, graus):
+        self._girar(eixo, graus)
         self.atualizar()
 
     # -- Controles do recorte ------------------------------------------------
@@ -284,12 +288,31 @@ class Aplicacao(Visualizador):
         super().executar(captura)     # desenha, registra as teclas do base e abre a janela
 
 
+def _vista(valor):
+    """Aceita o indice (0 a 3) ou o nome da vista (xy, xz, yz, isometrica)."""
+    nomes = Visualizador.VISTAS
+    if valor in nomes:
+        return nomes.index(valor)
+    if valor.isdigit() and int(valor) < len(nomes):
+        return int(valor)
+    raise argparse.ArgumentTypeError(f"vista invalida: {valor} (use 0-3 ou {', '.join(nomes)})")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("arquivo", help="arquivo .vtk")
     ap.add_argument("--captura", help="salva uma imagem e fecha (sem janela)")
     ap.add_argument("--modo", type=int, default=0, help="0, 1 ou 2")
-    ap.add_argument("--vista", type=int, default=0, help="0 a 3")
+    ap.add_argument("--vista", type=_vista, default=0,
+                    help="0/xy, 1/xz, 2/yz ou 3/isometrica (vale para --captura)")
+    ap.add_argument("--rotx", type=float, default=0.0,
+                    help="rotacao do modelo em X, em graus (cada 10 = uma vez a tecla u)")
+    ap.add_argument("--roty", type=float, default=0.0,
+                    help="rotacao do modelo em Y, em graus (cada 10 = uma vez a tecla a)")
+    ap.add_argument("--rotz", type=float, default=0.0,
+                    help="rotacao do modelo em Z, em graus (cada 10 = uma vez a tecla z)")
+    ap.add_argument("--projecao", choices=["perspectiva", "ortografica"],
+                    default="perspectiva", help="projecao da camera (tecla o)")
     ap.add_argument("--recorte", action="store_true", help="inicia com o recorte ligado")
     ap.add_argument("--algoritmo", type=int, default=0, choices=[0, 1],
                     help="0 = Cohen-Sutherland, 1 = Liang-Barsky")
@@ -301,6 +324,11 @@ if __name__ == "__main__":
     app = Aplicacao(a.arquivo, off_screen=a.captura is not None, janela=a.janela,
                     recorte=a.recorte, algoritmo=a.algoritmo)
     app.modo, app.vista = a.modo, a.vista
+    for eixo, graus in (("x", a.rotx), ("y", a.roty), ("z", a.rotz)):
+        if graus:
+            app._girar(eixo, graus)              # entra na matriz; desenhar() a aplica
+    if a.projecao == "ortografica":
+        app.alternar_projecao()
     if a.captura:
         app.desenhar()
         app.aplicar_vista()
